@@ -1,7 +1,13 @@
 package com.example.synchromusique;
 
+import static com.example.synchromusique.tools.SendJSON;
+
 import android.app.DownloadManager;
+import android.content.BroadcastReceiver;
 import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
+import android.database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
 
@@ -13,6 +19,7 @@ import android.view.View;
 
 
 import android.widget.Button;
+import android.widget.TextView;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -35,6 +42,8 @@ import java.util.Iterator;
 public class SynchroMusique extends AppCompatActivity {
 
     Button button;
+    TextView progression;
+
     DownloadManager downloadManager;
 
     private static final String TAG = "MainActivity";
@@ -44,12 +53,16 @@ public class SynchroMusique extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        DBHandler dbHandler = new DBHandler(this);
         setContentView(R.layout.activity_synchromusique);
 
         button = (Button)findViewById(R.id.button_download);
+        progression = (TextView)findViewById(R.id.progress);
+
         button.setOnClickListener(new View.OnClickListener() {;
             @Override
             public void onClick(View view) {
+                progression.setText("Démarrage");
                 /* Crée le dossier Game Music si il n'existe pas*/
                 File musicDir = new File(Environment.getExternalStoragePublicDirectory(
                         Environment.DIRECTORY_MUSIC), "Game Music");
@@ -65,18 +78,61 @@ public class SynchroMusique extends AppCompatActivity {
                         public void run() {
                             try {
                                 // Récupère le JSON que le serveur retourne
-                                String JsonString = SendJSON(JSONMusic);
+                                String apiKey = dbHandler.get_api_key();
+                                String server = dbHandler.get_server();
+                                String JsonString = SendJSON(JSONMusic, server, "music_sync");
                                 JSONObject jsonObject = new JSONObject(JsonString);
                                 Log.d(TAG, "Mon JSON nouveau" + jsonObject);
                                 Log.d(TAG, "Taille de mon JSON " + jsonObject.length());
                                 Iterator<String> keys = jsonObject.keys();
+                                int numberDownload = jsonObject.length() - 1;
                                 while(keys.hasNext()) {
                                     String key = keys.next();
                                     Log.d(TAG, "Valeur de key" + key);
                                     Log.d(TAG, "Valeur obtenu" + jsonObject.get(key));
                                     JSONObject files = jsonObject.getJSONObject(key);
+                                    String filename = files.getString(("fileName"));
+                                    Log.d(TAG, "Téléchargement de " + files.getString(("fileName")));
+                                    String url = "https://" + server + "/music/" + files.getString("files_URL") + "?api_key=" + apiKey;
+                                    Log.d(TAG, url);
                                     //Télécharge le fichier de chaque URL
-                                    downloadFiles(files.getString("fileName"), files.getString("URL"), files.getString("folder"));
+                                    long downloadId = downloadFiles(files.getString("fileName"), url, files.getString("folder"));
+                                    boolean DownloadComplete = false;
+                                    while(!DownloadComplete) {
+                                        Cursor cursor = downloadManager.query(new DownloadManager.Query().setFilterById(downloadId));
+                                        if (cursor.moveToNext()) {
+                                            int status = cursor.getInt(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS));
+                                            cursor.close();
+                                            if (status == DownloadManager.STATUS_RUNNING || status == DownloadManager.STATUS_PENDING) {
+                                                runOnUiThread(new Runnable() {
+                                                    @Override
+                                                    public void run() {
+                                                        progression.setText("Téléchargement de " + filename + " " + key + " / "  + numberDownload);
+                                                    }
+                                                });
+                                            }
+                                            if (status == DownloadManager.STATUS_SUCCESSFUL) {
+                                                runOnUiThread(new Runnable() {
+                                                    @Override
+                                                    public void run() {
+                                                        progression.setText("Téléchargement de " + filename + " " + key + " / "  + numberDownload +" réussi ! ");
+                                                    }
+                                                });
+                                                DownloadComplete = true;
+
+                                            }
+                                            if (status == DownloadManager.STATUS_FAILED) {
+                                                runOnUiThread(new Runnable() {
+                                                    @Override
+                                                    public void run() {
+                                                        progression.setText("Problème lors du téléchargement du fichier :" + filename + " " + key + " / "  + numberDownload);
+                                                    }
+                                                });
+                                                DownloadComplete = true;
+                                            }
+
+                                        }
+                                    }
                                 }
 
                             } catch (Exception e) {
@@ -119,41 +175,9 @@ public class SynchroMusique extends AppCompatActivity {
                 Log.d(TAG, "Mon JSON magnifique" + jsonArray);
                 return jsonArray;
             }
-            // Fonction qui permet d'envoyer un JSON vers le serveur WEB
-            private String SendJSON(JSONArray json) {
-                try {
-                    Log.d(TAG, "json" + json);
-                    URL url = new URL("http://192.168.1.142:5000/music_sync");
-                    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-                    conn.setRequestMethod("POST");
-                    conn.setRequestProperty("Content-Type", "application/json");
-                    conn.setRequestProperty("Accept", "application/json");
-                    conn.setDoOutput(true);
-                    DataOutputStream os = new DataOutputStream(conn.getOutputStream());
-                    byte[] bytes = json.toString().getBytes(StandardCharsets.UTF_8);
-                    String json_files = new String(bytes, StandardCharsets.UTF_8);
-                    os.write(json_files.getBytes(StandardCharsets.UTF_8));
-                    os.flush();
-                    os.close();
-                    Log.i("STATUS", String.valueOf(conn.getResponseCode()));
-                    Log.i("MSG" , conn.getResponseMessage());
-                    BufferedReader br = null;
-                    StringBuilder builder = new StringBuilder();
-                    br = new BufferedReader(new InputStreamReader(conn.getInputStream()));
-                    String strCurrentLine;
-                    while ((strCurrentLine = br.readLine()) != null) {
-                        builder.append(strCurrentLine);
-                    }
-                    conn.disconnect();
-                    return builder.toString();
-                } catch (Exception e){
-                    Log.e(TAG, "Error in sending JSON", e);
-                }
-                return null;
-            }
 
             // Fonction qui créé un dossier avec le chemin donné, télécharge un fichier depuis une URL donné et lui donne le nom donné.
-            private void downloadFiles(String fileName, String URL, String folder) throws URISyntaxException, MalformedURLException, UnsupportedEncodingException {
+            private long downloadFiles(String fileName, String URL, String folder) throws URISyntaxException, MalformedURLException, UnsupportedEncodingException {
                 File musicDir = createFolder(folder);
                 downloadManager = (DownloadManager) getSystemService(Context.DOWNLOAD_SERVICE);
                 File file = new File(musicDir, fileName);
@@ -165,7 +189,7 @@ public class SynchroMusique extends AppCompatActivity {
                 request.setAllowedOverMetered(true);
                 request.setAllowedOverRoaming(true);
                 request.setDestinationUri(Uri.fromFile(file));
-                Long reference = downloadManager.enqueue(request);
+                return downloadManager.enqueue(request);
             }
 
             //Fonction qui permet de créer un dossier sur le téléphone avec le chemin du dossier donné. Retourne le dossier correspondant.
@@ -186,6 +210,7 @@ public class SynchroMusique extends AppCompatActivity {
 
             }
         });
+
     }
 
 }

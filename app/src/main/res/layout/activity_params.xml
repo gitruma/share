@@ -1,38 +1,74 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".Params">
+    android:fitsSystemWindows="true"
+    tools:context=".SynchroMusique">
 
-    <androidx.constraintlayout.widget.ConstraintLayout
+    <LinearLayout
+        android:id="@+id/linearLayout"
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
+        android:layout_height="match_parent"
+        android:layout_gravity="center"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:padding="16dp"
+        tools:context=".SynchroMusique">
 
         <TextView
-            android:id="@+id/param_result"
+            android:id="@+id/textView"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="result"
-            tools:layout_editor_absoluteX="188dp"
-            tools:layout_editor_absoluteY="90dp" />
+            android:layout_marginBottom="8dp"
+            android:text="Nom d'utilisateur" />
+
+        <EditText
+            android:id="@+id/username_input"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Nom d'utilisateur"
+            android:inputType="text" />
 
         <TextView
-            android:id="@+id/param_name"
+            android:id="@+id/textView4"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="name"
-            tools:layout_editor_absoluteX="188dp"
-            tools:layout_editor_absoluteY="147dp" />
+            android:text="Mot de passe"
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="8dp" />
+
+        <EditText
+            android:id="@+id/password_input"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Mot de passe"
+            android:inputType="textPassword" />
+        <TextView
+            android:id="@+id/param_server"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Adresse du serveur"
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="8dp" />
+
+        <EditText
+            android:id="@+id/server_input"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Adresse du serveur"
+            android:inputType="text" />
 
         <Button
             android:id="@+id/param_button"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Button"
-            tools:layout_editor_absoluteX="160dp"
-            tools:layout_editor_absoluteY="208dp" />
-    </androidx.constraintlayout.widget.ConstraintLayout>
+            android:text="Valider"
+            android:layout_marginTop="24dp" />
 
-</androidx.constraintlayout.widget.ConstraintLayout>
+
+    </LinearLayout>
++
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout>
