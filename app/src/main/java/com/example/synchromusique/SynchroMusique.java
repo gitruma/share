@@ -1,6 +1,7 @@
 package com.example.synchromusique;
 
 import static com.example.synchromusique.tools.SendJSON;
+import static com.example.synchromusique.tools.isConnexion;
 
 import android.app.DownloadManager;
 import android.content.BroadcastReceiver;
@@ -8,6 +9,8 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.database.Cursor;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.Bundle;
 
@@ -59,6 +62,11 @@ public class SynchroMusique extends AppCompatActivity {
         button = (Button)findViewById(R.id.button_download);
         progression = (TextView)findViewById(R.id.progress);
 
+        boolean connexion = isConnexion(this);
+        if(!connexion){
+            button.setVisibility(View.GONE);
+        }
+
         button.setOnClickListener(new View.OnClickListener() {;
             @Override
             public void onClick(View view) {
@@ -96,7 +104,13 @@ public class SynchroMusique extends AppCompatActivity {
                                     String url = "https://" + server + "/music/" + files.getString("files_URL") + "?api_key=" + apiKey;
                                     Log.d(TAG, url);
                                     //Télécharge le fichier de chaque URL
-                                    long downloadId = downloadFiles(files.getString("fileName"), url, files.getString("folder"));
+                                    String Directory_folder = files.getString("folder");
+                                    if(Directory_folder.contains("/")){
+                                        Directory_folder = Directory_folder.substring(0, Directory_folder.indexOf("/"));
+                                    }
+                                    Log.d("Test dossier", Directory_folder);
+                                    Directory_folder = Directory_folder.toUpperCase();
+                                    long downloadId = downloadFiles(files.getString("fileName"), url, files.getString("folder"), Directory_folder);
                                     boolean DownloadComplete = false;
                                     while(!DownloadComplete) {
                                         Cursor cursor = downloadManager.query(new DownloadManager.Query().setFilterById(downloadId));
@@ -132,6 +146,7 @@ public class SynchroMusique extends AppCompatActivity {
                                             }
 
                                         }
+                                        Thread.sleep(250);
                                     }
                                 }
 
@@ -177,8 +192,8 @@ public class SynchroMusique extends AppCompatActivity {
             }
 
             // Fonction qui créé un dossier avec le chemin donné, télécharge un fichier depuis une URL donné et lui donne le nom donné.
-            private long downloadFiles(String fileName, String URL, String folder) throws URISyntaxException, MalformedURLException, UnsupportedEncodingException {
-                File musicDir = createFolder(folder);
+            private long downloadFiles(String fileName, String URL, String folder, String directory_folder) throws URISyntaxException, MalformedURLException, UnsupportedEncodingException {
+                File musicDir = createFolder(folder, directory_folder);
                 downloadManager = (DownloadManager) getSystemService(Context.DOWNLOAD_SERVICE);
                 File file = new File(musicDir, fileName);
                 Log.d(TAG, URL);
@@ -193,9 +208,21 @@ public class SynchroMusique extends AppCompatActivity {
             }
 
             //Fonction qui permet de créer un dossier sur le téléphone avec le chemin du dossier donné. Retourne le dossier correspondant.
-            private File createFolder(String folder){
+            private File createFolder(String folder, String directory_folder){
+                Log.d("DOSSIER", directory_folder);
                 File musicDir = new File(Environment.getExternalStoragePublicDirectory(
-                        Environment.DIRECTORY_MUSIC), "Game Music" + File.separator + folder);
+                        Environment.DIRECTORY_MUSIC), "Share" + File.separator + folder);
+                if (directory_folder.equals("DOCUMENTS")){
+                    musicDir = new File(Environment.getExternalStoragePublicDirectory(
+                            Environment.DIRECTORY_DOCUMENTS),  "Share" + File.separator + folder);
+                } else if (directory_folder.equals("MUSIC")) {
+                    musicDir = new File(Environment.getExternalStoragePublicDirectory(
+                            Environment.DIRECTORY_MUSIC), "Share" + File.separator + folder);
+                }else if (directory_folder.equals("IMAGE")) {
+                    musicDir = new File(Environment.getExternalStoragePublicDirectory(
+                            Environment.DIRECTORY_PICTURES), "Share" + File.separator + folder);
+                }
+
                 if (!musicDir.exists()) {
                     if (musicDir.mkdirs()) {
                         Log.d("Test", "Dossier créé avec succès: " + musicDir.getAbsolutePath());

@@ -6,6 +6,8 @@ import static androidx.core.content.ContextCompat.getSystemService;
 
 import android.app.DownloadManager;
 import android.content.Context;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.Environment;
 import android.util.Log;
@@ -24,6 +26,10 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 
 public class tools {
+
+    /*
+    Fonction qui permet d'envoyer un JSON à un serveur web
+     */
     public static String SendJSON(Object json, String server, String route) {
         try {
             Log.d(TAG, "json" + json);
@@ -54,6 +60,14 @@ public class tools {
             Log.e(TAG, "Error in sending JSON", e);
         }
         return null;
+    }
+    /*
+    Fonction qui permet de tester la connexion internet d'un téléphone
+     */
+    public static boolean isConnexion(Context context) {
+        ConnectivityManager connectivityManager =(ConnectivityManager)context.getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo activeNetworkInfo = connectivityManager.getActiveNetworkInfo();
+        return activeNetworkInfo != null && activeNetworkInfo.isConnected();
     }
 }
 
