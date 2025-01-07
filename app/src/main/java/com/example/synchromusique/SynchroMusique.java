@@ -12,6 +12,7 @@ import android.database.Cursor;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -72,11 +73,17 @@ public class SynchroMusique extends AppCompatActivity {
             public void onClick(View view) {
                 progression.setText("Démarrage");
                 /* Crée le dossier Game Music si il n'existe pas*/
-                File musicDir = new File(Environment.getExternalStoragePublicDirectory(
-                        Environment.DIRECTORY_MUSIC), "Game Music");
+                File musicDir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS), "Hiruma/Share");
                 if (!musicDir.exists()) {
-                    musicDir.mkdirs();
+                    boolean result = musicDir.mkdirs();
+                    if(!result){
+                        Log.d("Echec", "Echec !");
+                    }else{
+                        Log.d("Réussite", "réussite!");
+                    }
                 }
+                Log.d("Files", "Checking directory: " + musicDir.getAbsolutePath());
+
                 /* Création de la liste des fichiers dans un JSON puis envoi du JSON vers le serveur*/
                 try {
                     JSONArray JSONMusic = JsonFile(musicDir);
@@ -88,6 +95,7 @@ public class SynchroMusique extends AppCompatActivity {
                                 // Récupère le JSON que le serveur retourne
                                 String apiKey = dbHandler.get_api_key();
                                 String server = dbHandler.get_server();
+                                String deviceName = Build.MODEL;
                                 String JsonString = SendJSON(JSONMusic, server, "music_sync");
                                 JSONObject jsonObject = new JSONObject(JsonString);
                                 Log.d(TAG, "Mon JSON nouveau" + jsonObject);
@@ -101,16 +109,19 @@ public class SynchroMusique extends AppCompatActivity {
                                     JSONObject files = jsonObject.getJSONObject(key);
                                     String filename = files.getString(("fileName"));
                                     Log.d(TAG, "Téléchargement de " + files.getString(("fileName")));
-                                    String url = "https://" + server + "/music/" + files.getString("files_URL") + "?api_key=" + apiKey;
+                                    String url = "https://" + server + "/music/" + files.getString("files_URL") + "?api_key=" + apiKey + "&device=" + deviceName;
                                     Log.d(TAG, url);
                                     //Télécharge le fichier de chaque URL
+                                    /*
                                     String Directory_folder = files.getString("folder");
                                     if(Directory_folder.contains("/")){
                                         Directory_folder = Directory_folder.substring(0, Directory_folder.indexOf("/"));
                                     }
                                     Log.d("Test dossier", Directory_folder);
                                     Directory_folder = Directory_folder.toUpperCase();
-                                    long downloadId = downloadFiles(files.getString("fileName"), url, files.getString("folder"), Directory_folder);
+
+                                     */
+                                    long downloadId = downloadFiles(files.getString("fileName"), url, files.getString("folder") /*, Directory_folder */);
                                     boolean DownloadComplete = false;
                                     while(!DownloadComplete) {
                                         Cursor cursor = downloadManager.query(new DownloadManager.Query().setFilterById(downloadId));
@@ -192,8 +203,8 @@ public class SynchroMusique extends AppCompatActivity {
             }
 
             // Fonction qui créé un dossier avec le chemin donné, télécharge un fichier depuis une URL donné et lui donne le nom donné.
-            private long downloadFiles(String fileName, String URL, String folder, String directory_folder) throws URISyntaxException, MalformedURLException, UnsupportedEncodingException {
-                File musicDir = createFolder(folder, directory_folder);
+            private long downloadFiles(String fileName, String URL, String folder /*, String directory_folder */) throws URISyntaxException, MalformedURLException, UnsupportedEncodingException {
+                File musicDir = createFolder(folder);
                 downloadManager = (DownloadManager) getSystemService(Context.DOWNLOAD_SERVICE);
                 File file = new File(musicDir, fileName);
                 Log.d(TAG, URL);
@@ -208,10 +219,10 @@ public class SynchroMusique extends AppCompatActivity {
             }
 
             //Fonction qui permet de créer un dossier sur le téléphone avec le chemin du dossier donné. Retourne le dossier correspondant.
-            private File createFolder(String folder, String directory_folder){
-                Log.d("DOSSIER", directory_folder);
+            private File createFolder(String folder /*, String directory_folder */){
                 File musicDir = new File(Environment.getExternalStoragePublicDirectory(
-                        Environment.DIRECTORY_MUSIC), "Share" + File.separator + folder);
+                        Environment.DIRECTORY_DOCUMENTS), "Hiruma/Share" + File.separator + folder);
+                /* En attente, permet de créer le dossier SHARE dans Documents, music, image.
                 if (directory_folder.equals("DOCUMENTS")){
                     musicDir = new File(Environment.getExternalStoragePublicDirectory(
                             Environment.DIRECTORY_DOCUMENTS),  "Share" + File.separator + folder);
@@ -222,6 +233,8 @@ public class SynchroMusique extends AppCompatActivity {
                     musicDir = new File(Environment.getExternalStoragePublicDirectory(
                             Environment.DIRECTORY_PICTURES), "Share" + File.separator + folder);
                 }
+
+                 */
 
                 if (!musicDir.exists()) {
                     if (musicDir.mkdirs()) {
